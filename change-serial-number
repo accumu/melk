@@ -1,0 +1,48 @@
+#!/usr/local/bin/perl
+
+use List::Util qw(max);
+
+$len = @ARGV;
+if(0 eq $len) {
+  print "Usage: $0 [name of header files to change serial number in]\n";
+  exit;
+}
+($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
+$year+=1900;
+$mon++;
+$myserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
+foreach $file ( @ARGV ) {
+  ($dir,$basn)=split /\//, $file;
+  if($dir =~ /^[0-9.]+$/) {
+    $zone = join(".",(reverse(split(/\./, $dir)),"in-addr.arpa"));
+  # lite jobbigare mappning att gissa.. :/
+  } elsif($dir =~ /20016b0e([0-9a-f]+)/) {
+        $zone = join(".",(reverse(split(//,$1)),"e.0.0.0.0.b.6.0.1.0.0.2.ip6.arpa"));
+  } elsif($dir =~ /20016b019/) {
+        $zone = "9.1.0.0.0.b.6.0.1.0.0.2.ip6.arpa";
+  } else {
+    $zone = $dir;
+  }
+  @SOA=split / /, `host -t soa $zone`;
+  `co -q -l $file 2>&1 > /dev/null`;
+  rename($file, $file . ".OLD") || die "Can't rename in file $file.";
+  open(IN, $file . ".OLD") || die "Can't read from $file.";
+  open(OUT, "> " . $file) || die "Can't write to $file.";
+  while(<IN>) {
+    if(/^\s+(\d{10})\s+\;\s+Serial/) {
+      $fserial = $1;
+      $myserial = max($myserial, $fserial, $SOA[6]);
+      $myserial++;
+print "soa: $SOA[6] och fserial: $fserial => myserial: $myserial \n";
+      printf OUT "\t\t\t%d\t; Serial\n", $myserial;
+    } else {
+      print OUT;
+    }
+  }
+  printf "%s is now revision %d\n", $file, $myserial;
+  close(IN);
+  close(OUT);
+  `ci -q -u -m"Serial number changed" $file 2>&1 > /dev/null`;
+}
+# Assume makefile reloads appropriately
+# system("/usr/sbin/rndc reload $zone") == 0 or die "rndc reload $zone failed: $?";
