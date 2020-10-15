@@ -1,21 +1,31 @@
-#!/usr/local/bin/perl
+#!/usr/bin/perl
 
+use Getopt::Long;
 use List::Util qw(max);
+
+my $verbose=0;
+my $do_reload = 0;
+
+GetOptions("verbose" => \$verbose, "reload" => \$do_reload);
 
 $len = @ARGV;
 if(0 eq $len) {
-  print "Usage: $0 [name of header files to change serial number in]\n";
+  print "Usage: $0 [--verbose] [--reload] [name of header files to change serial number in]\n";
+  print "  --verbose verbose\n";
+  print "  --reload do rndc reload zone\n";
   exit;
 }
+
 ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 $year+=1900;
 $mon++;
-$myserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
+$newserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
+
 foreach $file ( @ARGV ) {
   ($dir,$basn)=split /\//, $file;
   if($dir =~ /^[0-9.]+$/) {
     $zone = join(".",(reverse(split(/\./, $dir)),"in-addr.arpa"));
-  # lite jobbigare mappning att gissa.. :/
+  # Looks like a ipv6 reverse zone at UmU
   } elsif($dir =~ /20016b0e([0-9a-f]+)/) {
         $zone = join(".",(reverse(split(//,$1)),"e.0.0.0.0.b.6.0.1.0.0.2.ip6.arpa"));
   } elsif($dir =~ /20016b019/) {
@@ -24,25 +34,37 @@ foreach $file ( @ARGV ) {
     $zone = $dir;
   }
   @SOA=split / /, `host -t soa $zone`;
-  `co -q -l $file 2>&1 > /dev/null`;
+  system("cp $file.in $file") unless -f $file;
   rename($file, $file . ".OLD") || die "Can't rename in file $file.";
-  open(IN, $file . ".OLD") || die "Can't read from $file.";
+  open(CURR, $file . ".OLD") || die "Can't read from $file.OLD";
+  open(IN, $file . ".in") || die "Can't read from $file.in";
   open(OUT, "> " . $file) || die "Can't write to $file.";
-  while(<IN>) {
+  while(<CURR>) {
     if(/^\s+(\d{10})\s+\;\s+Serial/) {
       $fserial = $1;
-      $myserial = max($myserial, $fserial, $SOA[6]);
-      $myserial++;
-print "soa: $SOA[6] och fserial: $fserial => myserial: $myserial \n";
-      printf OUT "\t\t\t%d\t; Serial\n", $myserial;
+      $newserial = max($newserial, $fserial, $SOA[6]);
+      $newserial++;
+      print "soa: $SOA[6] and file: $fserial => newserial: $newserial \n" if $verbose;
+    }
+  }
+  while(<IN>) {
+    if(/^\s+(\d{10})\s+\;\s+Serial/) {
+      printf OUT "\t\t\t%d\t; Serial\n", $newserial;
     } else {
       print OUT;
     }
   }
-  printf "%s is now revision %d\n", $file, $myserial;
+  printf "%s is now revision %d\n", $file, $newserial;
   close(IN);
   close(OUT);
-  `ci -q -u -m"Serial number changed" $file 2>&1 > /dev/null`;
+  close(CURR);
 }
-# Assume makefile reloads appropriately
-# system("/usr/sbin/rndc reload $zone") == 0 or die "rndc reload $zone failed: $?";
+
+if ($do_reload) {
+    if (!system("rndc status >/dev/null 2>&1")) {
+	print "rndc reload $zone\n" if ($verbose);
+	system("rndc reload $zone") == 0 or print "rndc reload $zone failed: $?\n";
+    } else {
+	print "rndc status failed: $?. Not reloading $zone\n" if $verbose;
+    }
+}
