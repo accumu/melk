@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+use warnings;
+#use strict; # FIXME
+
 use Getopt::Long;
 use List::Util qw(max);
 
@@ -16,13 +19,13 @@ if(0 eq $len) {
   exit;
 }
 
-($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
+my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 $year+=1900;
 $mon++;
 $newserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
 
 foreach $file ( @ARGV ) {
-  ($dir,$basn)=split /\//, $file;
+  my ($dir,$basn)=split /\//, $file;
   if($dir =~ /^[0-9.]+$/) {
     $zone = join(".",(reverse(split(/\./, $dir)),"in-addr.arpa"));
   # Looks like a ipv6 reverse zone at UmU

@@ -1,4 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
+
+use warnings;
+#use strict; # FIXME
 
 #Example from cs in Makefile.in:
 #cs.umu.se               130.239.40      2001:6b0:e:4040

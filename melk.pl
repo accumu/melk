@@ -1,7 +1,8 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 # melk, a dns thingie
 #
 use strict;
+use warnings;
 
 my $verbose = 0;
 my $dryrun = 0;
