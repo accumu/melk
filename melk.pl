@@ -21,7 +21,9 @@
 use strict;
 use warnings;
 
-my $verbose = 0;
+use File::Temp qw /tempfile/;
+
+my $verbose = $ENV{DEBUG}?1:0;
 my $dryrun = 0;
 my $cmd = $0 . " " . join(" ", @ARGV);
 my $now = localtime;
@@ -31,6 +33,20 @@ my $infohdr = "; *********************************************************
 ; * $cmd
 ; * on $now
 ; *********************************************************\n\n";
+my @tmpfiles;
+
+$SIG{__DIE__}  = sub {
+
+	return unless @tmpfiles;
+
+	unless($ENV{DEBUG}) {
+		print "Removing generated temporary files\n" if $verbose;
+		unlink @tmpfiles;
+	}
+	else {
+		print "Leaving temporary files:\n", join("\n", @tmpfiles), "\n";
+	}
+};
 
 sub mywarn {
 	print "\e[31m".join("",@_)."\e[0m";
@@ -117,30 +133,23 @@ if(defined $ipv6net) {
     $dhcp6filename =~ s/://g;
 }
 
-if($dryrun) {
-    $dhcpfilename = "/dev/null";
-    $dhcp6filename = "/dev/null";
-    $forwfilename = "/dev/null";
-    $revefilename = "/dev/null";
-    $reve6filename = "/dev/null";
-}
-
-open(INFILE, $inf) || 
+open(my $INFILE, $inf) ||
 		die "E3275 can't open infile $inf: $!";
-open(FORVFILE, ">$forwfilename") || 
-		die "E1563 can't open forw file $forwfilename: $!";
-open(REVEFILE, ">$revefilename") || 
-		die "E1096 can't open reve file $revefilename: $!";
+
+my($FORVFILE, $forwfiletmp) = tempfile("$forwfilename.XXXXXX");
+push @tmpfiles, $forwfiletmp;
+my($REVEFILE, $revefiletmp) = tempfile("$revefilename.XXXXXX");
+push @tmpfiles, $revefiletmp;
 if($verbose) {
         print "I5601 Opened infile $inf\n";
-        print "I5602 Opened forw $forwfilename\n";
-        print "I5603 Opened reve $revefilename\n";
+        print "I5602 Opened forw $forwfiletmp\n";
+        print "I5603 Opened reve $revefiletmp\n";
 }
 
-if(open(SSHFPFILE, "$sshfpfilename")) {
+if(open(my $SSHFPFILE, "$sshfpfilename")) {
     print "I5606 Opened sshfp $sshfpfilename\n" if $verbose;
     my ($sline, $stype,$htype,$shost,$sfpr);
-    while($sline = <SSHFPFILE>) {
+    while($sline = <$SSHFPFILE>) {
           chomp $sline;
           ($shost,undef,undef,$stype,$htype,$sfpr)=split / /,$sline;
           $sshfp{$shost . ' ' . $stype . ' ' . $htype}=$sfpr;
@@ -152,27 +161,29 @@ if(open(SSHFPFILE, "$sshfpfilename")) {
     print "W5606 Can't open $sshfpfilename: $!\n" if $verbose;
 }
 
+my ($REVE6FILE, $reve6filetmp);
 if($reve6filename) {
-    open(REVE6FILE, ">$reve6filename") || 
-		die "E8214 can't open reve6 file $reve6filename: $!";
+    ($REVE6FILE, $reve6filetmp) = tempfile("$reve6filename.XXXXXX");
+    push @tmpfiles, $reve6filetmp;
 
-    print "I5605 Opened reve6 $reve6filename\n" if $verbose;
+    print "I5605 Opened reve6 $reve6filetmp\n" if $verbose;
 }
 
 
+#my ($DHCPFILE, $dhcpfiletmp);
 #if($dhcpfilename) {
-#    open(DHCPFILE, ">$dhcpfilename") || 
-#		die "E8213 can't open dhcp file $dhcpfilename: $!";
+#    ($DHCPFILE, $dhcpfiletmp) = tempfile("$dhcpfilename.XXXXXX");
+#    push @tmpfiles, $dhcpfiletmp;
 #
-#    print "I5604 Opened dhcp $dhcpfilename\n" if $verbose;
+#    print "I5604 Opened dhcp $dhcpfiletmp\n" if $verbose;
 #}
 
 
-sub forw { print FORVFILE @_; }
+sub forw { print $FORVFILE @_; }
 
-sub reve { print REVEFILE @_; }
+sub reve { print $REVEFILE @_; }
 
-sub reve6 { print REVE6FILE @_; }
+sub reve6 { print $REVE6FILE @_; }
 
 sub ethers($$) {
 	my ($group,$data) = @_;
@@ -426,7 +437,7 @@ my ($line, $ip, $hosts, $cname, @hosts, $mname, $ttl);
 &forw($infohdr);
 &reve($infohdr);
 
-while ($line = <INFILE>) {
+while ($line = <$INFILE>) {
 	next if ($line =~ /^\s*\#/); # COMMENTS (typ RCS headers...)
 	if ($line =~ /^DHCPGROUPS=(.*)/) {
 		my @groups = split(/\s+/,$1);
@@ -491,11 +502,11 @@ while ($line = <INFILE>) {
 		die "E1974 \@$.: Trasig rad: $line";
 	}
 }
-close(INFILE);
-close(FORVFILE);
-close(REVEFILE);
-close(REVE6FILE) if $reve6filename;
-#close(DHCPFILE) if $dhcpfilename;
+close($INFILE) or die "close $inf: $!";
+close($FORVFILE) or die "close $forwfiletmp: $!";
+close($REVEFILE) or die "close $revefiletmp: $!";
+$reve6filename && close($REVE6FILE) or die "close $reve6filetmp: $!";
+#$dhcpfilename && close($DHCPFILE) or die "close $dhcpfiletmp: $!";
 
 for my $group (keys %dhcpgroups) {
 	last unless defined $ethersfilename;
@@ -508,14 +519,11 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp/ethers group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	if ($dryrun) {
-		print "Would create files for dhcp/ethers group [$group]\n";
-	} else {
-		print "Generating files for dhcp/ethers group [$group]\n";
-		open(F, ">", $ethersfilename.$suffix);
-		print F $data;
-		close(F);
-	}
+	print "Generating files for dhcp/ethers group [$group]\n";
+	my($F, $fn) = tempfile("$ethersfilename.$suffix.XXXXXX");
+	print $F $data;
+	close($F) or die "close $fn: $!";
+	push @tmpfiles, $fn;
 }
 for my $group (keys %dhcpgroups) {
 	last unless defined $dhcpfilename;
@@ -528,14 +536,11 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	if ($dryrun) {
-		print "Would create files for dhcp group [$group]\n";
-	} else {
-		print "Generating files for dhcp group [$group]\n";
-		open(F, ">", $dhcpfilename.$suffix);
-		print F $data;
-		close(F);
-	}
+	print "Generating files for dhcp group [$group]\n";
+	my($F, $fn) = tempfile("$dhcpfilename.$suffix.XXXXXX");
+	print $F $data;
+	close($F) or die "close $fn: $!";
+	push @tmpfiles, $fn;
 }
 
 for my $group (keys %dhcpgroups) {
@@ -549,13 +554,30 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp6 group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	if ($dryrun) {
-		print "Would create files for dhcp6 group [$group]\n";
-	} else {
-		print "Generating files for dhcp6 group [$group]\n";
-		open(F, ">", $dhcp6filename.$suffix);
-		print F $data;
-		close(F);
-	}
+	print "Generating files for dhcp6 group [$group]\n";
+	my($F, $fn) = tempfile("$dhcp6filename.$suffix.XXXXXX");
+	print $F $data;
+	close($F) or die "close $fn: $!";
+	push @tmpfiles, $fn;
 }
 
+if($verbose) {
+	print "Processing complete.\n";
+	print "Generated temporary files:\n", join("\n", @tmpfiles), "\n";
+}
+
+if($dryrun) {
+	unless($ENV{DEBUG}) {
+		print "Removing generated temporary files.\n" if $verbose;
+		unlink @tmpfiles or die "unlink tmpfiles: $!";
+	}
+}
+else {
+	chmod 0664 &~ umask(), @tmpfiles; # Honor umask, but never o+w ...
+	foreach my $tmp (@tmpfiles) {
+		my $fn = $tmp;
+		$fn =~ s/\.[^\.]+$//;
+		print "Rename $tmp -> $fn\n" if $verbose;
+		rename $tmp, $fn or die "rename $tmp -> $fn: $!";
+	}
+}
