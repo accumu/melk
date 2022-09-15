@@ -477,7 +477,7 @@ while ($line = <$INFILE>) {
 		($ip, $hosts) = ($line =~ /([0-9.]+)\s+(.*)/);
 		@hosts = split(/\s+/, $hosts);
 		if ($#hosts == -1) {
-			die "E2161 \@$.:Ey! ensam IP på rad $.";
+			die "E2161 \@$.:Ey! ensam IP pÃ¥ rad $.";
 		}
 		&ipdata($ip, @hosts);
 	} elsif ($line =~ /^[a-zA-Z][0-9a-zA-Z-]*(?:\(([0-9]+)\))?[ \t0-9;.a-zA-Z-]*$(;.*)?/) { # MULTINAME
@@ -486,7 +486,7 @@ while ($line = <$INFILE>) {
 		$line =~ s/\([0-9]+\)//; # remove ttl
 		($mname, @hosts) = split(/\s+/, $line);
 		if ($#hosts == -1) {
-			die "E2641 \@$.: Ey! ensam host på rad $.";
+			die "E2641 \@$.: Ey! ensam host pÃ¥ rad $.";
 		}
 		&multiname($mname, $ttl,  @hosts);
 	} elsif ($line =~ /^\@(?:\(([0-9]+)\))?[ \t0-9;.a-zA-Z-]*$(;.*)?/) { # @ MULTINAME
@@ -495,7 +495,7 @@ while ($line = <$INFILE>) {
 		$line =~ s/\([0-9]+\)//; # remove ttl
 		($mname, @hosts) = split(/\s+/, $line);
 		if ($#hosts == -1) {
-			die "E2641 \@$.: Ey! ensam host på rad $.";
+			die "E2641 \@$.: Ey! ensam host pÃ¥ rad $.";
 		}
 		&multiname($mname, $ttl,  @hosts);
 	} else {
