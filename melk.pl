@@ -121,6 +121,13 @@ $ethersfilename = "ethers/ethers-$zone-$ipnet$subnet-$infsuffix" if -d "ethers";
 my $forwfilename = "$zone/forw-$zone-$ipnet$subnet-$infsuffix";
 my $revefilename = "$ipnet/rev-$ipnet$subnet-$zone-$infsuffix";
 
+# Must create directories even in dry-run mode since we dump output to
+# temporary files.
+if (! -d "$ipnet") {
+    mkdir($ipnet) or die "mkdir $ipnet: $!";
+    print "Created directory '$ipnet'\n" if $verbose;
+}
+
 # And if we have an sshfp file, use that for SSHFP records
 my $sshfpfilename = "$zone/sshfp.list";
 
@@ -128,6 +135,13 @@ my $sshfpfilename = "$zone/sshfp.list";
 if(defined $ipv6net) {
     $reve6filename = "$ipv6net/rev-$ipv6net-$zone-$infsuffix";
     $reve6filename =~ s/://g;
+
+    my $ipv6dir = $ipv6net;
+    $ipv6dir =~ s/://g;
+    if (! -d "$ipv6dir") {
+	mkdir($ipv6dir) or die "mkdir $ipv6dir: $!";
+	print "Created directory '$ipv6dir'\n" if $verbose;
+    }
 
     $dhcp6filename = "dhcp/dhcp-$zone-$ipv6net$infsuffix" if -d "dhcp"; 
     $dhcp6filename =~ s/://g;
