@@ -162,13 +162,14 @@ if($verbose) {
 
 if(open(my $SSHFPFILE, "$sshfpfilename")) {
     print "I5606 Opened sshfp $sshfpfilename\n" if $verbose;
-    my ($sline, $stype,$htype,$shost,$sfpr);
-    while($sline = <$SSHFPFILE>) {
+    while(my $sline = <$SSHFPFILE>) {
           chomp $sline;
-          ($shost,undef,undef,$stype,$htype,$sfpr)=split / /,$sline;
-          $sshfp{$shost . ' ' . $stype . ' ' . $htype}=$sfpr;
+          my ($shost,$srest) = split(/ /, $sline, 2);
+          my (undef,undef,$salgo,$sfptype,undef) = split(/ /, $srest);
+          $sshfp{$shost}{$salgo}{$sfptype} = $srest;
+
           if($verbose) {
-              print "I5609 found sshfp for | " . $shost . ' ' . $stype . ' ' . $htype . " | with value of | " . $sfpr . " |\n";
+              print "I5609 found sshfp for | " . $shost . ' ' . $salgo . ' ' . $sfptype . " | with value of | " . $srest . " |\n";
           }
     }
 } else {
@@ -319,7 +320,6 @@ sub cleanv6($) {
 sub ipdata {
 	my ($ip, @hosts) = @_;
 	my ($host, $firsthost , $revip, $ip6, $ether);
-        my ($fpkt,$fpht,$fpd);
 	&sethostip($ip, @hosts);
 	$firsthost = shift @hosts;
         $dov6{$ip} = 'v4' if defined $ipv6net;
@@ -410,14 +410,13 @@ sub ipdata {
             }
         }
         
-        foreach $fpkt (1..4) {
-            foreach $fpht (1..2) {
-                if(defined $sshfp{$firsthost . ' ' . $fpkt . ' ' . $fpht}){
-                    $fpd = $sshfp{$firsthost . ' ' . $fpkt . ' ' . $fpht};
-                    &forw("				SSHFP $fpkt $fpht $fpd\n");
-                }
-            }
-        }
+	if (defined($sshfp{$firsthost})) {
+	    foreach my $salgo (sort keys %{$sshfp{$firsthost}}) {
+		foreach my $sftptype (sort keys %{$sshfp{$firsthost}{$salgo}}) {
+		    &forw("                            $sshfp{$firsthost}{$salgo}{$sftptype}\n");
+		}
+	    }
+	}
 
 	&forw("				MX 0 $mx\n");
 }
