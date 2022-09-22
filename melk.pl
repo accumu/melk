@@ -117,6 +117,8 @@ if(defined $ipv6net) {
 # Only do dhcp if there is a "dhcp" directory (or symlink to directory)
 $dhcpfilename = "dhcp/dhcp-$zone-$ipnet$subnet-$infsuffix" if -d "dhcp"; 
 $ethersfilename = "ethers/ethers-$zone-$ipnet$subnet-$infsuffix" if -d "ethers"; 
+open(my $INFILE, $inf) or die "E3275 can't open infile $inf: $!";
+print "I5601 Opened infile $inf\n" if $verbose;
 
 my $forwfilename = "$zone/forw-$zone-$ipnet$subnet-$infsuffix";
 my $revefilename = "$ipnet/rev-$ipnet$subnet-$zone-$infsuffix";
@@ -147,15 +149,11 @@ if(defined $ipv6net) {
     $dhcp6filename =~ s/://g;
 }
 
-open(my $INFILE, $inf) ||
-		die "E3275 can't open infile $inf: $!";
-
 my($FORVFILE, $forwfiletmp) = tempfile("$forwfilename.XXXXXX");
 push @tmpfiles, $forwfiletmp;
 my($REVEFILE, $revefiletmp) = tempfile("$revefilename.XXXXXX");
 push @tmpfiles, $revefiletmp;
 if($verbose) {
-        print "I5601 Opened infile $inf\n";
         print "I5602 Opened forw $forwfiletmp\n";
         print "I5603 Opened reve $revefiletmp\n";
 }
