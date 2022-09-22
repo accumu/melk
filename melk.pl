@@ -485,8 +485,7 @@ while ($line = <$INFILE>) {
 	} elsif ($line =~ /^\+/) { # ADD RR
 		$line =~ s/^\+ ?/			/;
 		&forw($line);
-	#} elsif ($line =~ /^[0-9][0-9.;]*[ \t0-9a-zA-Z:=-.]*(;.*)?$/) { # IPDATA
-	} elsif ($line =~ /^[0-9][0-9.;]*[ \t0-9a-zA-Z:=-]*(;.*)?$/) { # IPDATA
+	} elsif ($line =~ /^[0-9][0-9.;]*[ \t0-9a-zA-Z:.=-]*(;.*)?$/) { # IPDATA
 		$line =~ s/;.*//; # strip comment
 		($ip, $hosts) = ($line =~ /([0-9.]+)\s+(.*)/);
 		@hosts = split(/\s+/, $hosts);
