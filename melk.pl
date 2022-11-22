@@ -515,8 +515,8 @@ while ($line = <$INFILE>) {
 close($INFILE) or die "close $inf: $!";
 close($FORVFILE) or die "close $forwfiletmp: $!";
 close($REVEFILE) or die "close $revefiletmp: $!";
-$reve6filename && close($REVE6FILE) or die "close $reve6filetmp: $!";
-#$dhcpfilename && close($DHCPFILE) or die "close $dhcpfiletmp: $!";
+if($reve6filename) { close($REVE6FILE) or die "close $reve6filetmp: $!"; }
+#if($dhcpfilename) { close($DHCPFILE) or die "close $dhcpfiletmp: $!"; }
 
 for my $group (keys %dhcpgroups) {
 	last unless defined $ethersfilename;
