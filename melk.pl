@@ -530,7 +530,7 @@ for my $group (keys %dhcpgroups) {
 		$data = "# Empty group, fix me?\n";
 	}
 	print "Generating files for dhcp/ethers group [$group]\n";
-	my($F, $fn) = tempfile("$ethersfilename.$suffix.XXXXXX");
+	my($F, $fn) = tempfile("$ethersfilename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
 	push @tmpfiles, $fn;
@@ -547,7 +547,7 @@ for my $group (keys %dhcpgroups) {
 		$data = "# Empty group, fix me?\n";
 	}
 	print "Generating files for dhcp group [$group]\n";
-	my($F, $fn) = tempfile("$dhcpfilename.$suffix.XXXXXX");
+	my($F, $fn) = tempfile("$dhcpfilename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
 	push @tmpfiles, $fn;
@@ -565,7 +565,7 @@ for my $group (keys %dhcpgroups) {
 		$data = "# Empty group, fix me?\n";
 	}
 	print "Generating files for dhcp6 group [$group]\n";
-	my($F, $fn) = tempfile("$dhcp6filename.$suffix.XXXXXX");
+	my($F, $fn) = tempfile("$dhcp6filename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
 	push @tmpfiles, $fn;
