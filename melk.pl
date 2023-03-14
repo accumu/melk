@@ -145,8 +145,10 @@ if(defined $ipv6net) {
 	print "Created directory '$ipv6dir'\n" if $verbose;
     }
 
-    $dhcp6filename = "dhcp/dhcp-$zone-$ipv6net$infsuffix" if -d "dhcp"; 
-    $dhcp6filename =~ s/://g;
+    if(-d "dhcp") {
+        $dhcp6filename = "dhcp/dhcp-$zone-$ipv6net$infsuffix";
+        $dhcp6filename =~ s/://g;
+    }
 }
 
 my($FORVFILE, $forwfiletmp) = tempfile("$forwfilename.XXXXXX");
