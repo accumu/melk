@@ -64,7 +64,7 @@ if($ARGV[0] eq '-n') {
 
 if ($#ARGV <3 or $#ARGV>5) {
 	print("Usage: $0 [-v] [-n] <source file> <mx> <domain> <network> [<v6network>] [<subnet>]\n");
-	exit(0);
+	exit(1);
 }
 
 my $inf = shift @ARGV;
