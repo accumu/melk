@@ -194,11 +194,11 @@ if($reve6filename) {
 #}
 
 
-sub forw { print $FORVFILE @_; }
+sub forw { print $FORVFILE @_ if $FORVFILE; }
 
-sub reve { print $REVEFILE @_; }
+sub reve { print $REVEFILE @_ if $REVEFILE; }
 
-sub reve6 { print $REVE6FILE @_; }
+sub reve6 { print $REVE6FILE @_ if $REVE6FILE; }
 
 sub ethers($$) {
 	my ($group,$data) = @_;
