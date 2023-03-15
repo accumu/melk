@@ -531,7 +531,7 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp/ethers group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	print "Generating files for dhcp/ethers group [$group]\n";
+	print "Generating files for dhcp/ethers group [$group]\n" if $verbose;
 	my($F, $fn) = tempfile("$ethersfilename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
@@ -548,7 +548,7 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	print "Generating files for dhcp group [$group]\n";
+	print "Generating files for dhcp group [$group]\n" if $verbose;
 	my($F, $fn) = tempfile("$dhcpfilename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
@@ -566,7 +566,7 @@ for my $group (keys %dhcpgroups) {
 		mywarn "WARNING: Empty dhcp6 group $group\n";
 		$data = "# Empty group, fix me?\n";
 	}
-	print "Generating files for dhcp6 group [$group]\n";
+	print "Generating files for dhcp6 group [$group]\n" if $verbose;
 	my($F, $fn) = tempfile("$dhcp6filename$suffix.XXXXXX");
 	print $F $data;
 	close($F) or die "close $fn: $!";
