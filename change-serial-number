@@ -55,7 +55,9 @@ foreach my $file ( @ARGV ) {
     $zone = $dir;
   }
   my @SOA=split / /, `host -t soa $zone`;
-  system("cp $file.in $file") unless -f $file;
+  if(! -f $file) {
+    system("cp $file.in $file") && die "No $file or $file.in, aborting.\n";
+  }
   rename($file, $file . ".OLD") || die "Can't rename in file $file.";
   open(CURR, $file . ".OLD") || die "Can't read from $file.OLD";
   open(IN, $file . ".in") || die "Can't read from $file.in";
@@ -76,9 +78,9 @@ foreach my $file ( @ARGV ) {
     }
   }
   printf "%s is now revision %d\n", $file, $newserial;
-  close(IN);
-  close(OUT);
-  close(CURR);
+  close(IN) or die "Closing IN: $!";
+  close(OUT) or die "Closing OUT: $!";
+  close(CURR) or die "Closing CURR: $!";
 
   if ($do_reload) {
       if (!system("rndc status >/dev/null 2>&1")) {
