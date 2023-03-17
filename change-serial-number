@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # melk, a dns thingie
 #
-#  Copyright (C) 2001-2022 Mattias Wadenstein et al.
+#  Copyright (C) 2001-2023 Mattias Wadenstein et al.
 #  https://github.com/accumu/melk
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 
 
 use warnings;
-#use strict; # FIXME
+use strict;
 
 use Getopt::Long;
 use List::Util qw(max);
@@ -29,8 +29,7 @@ my $do_reload = 0;
 
 GetOptions("verbose" => \$verbose, "reload" => \$do_reload);
 
-$len = @ARGV;
-if(0 eq $len) {
+if(scalar(@ARGV) == 0) {
   print "Usage: $0 [--verbose] [--reload] [name of header files to change serial number in]\n";
   print "  --verbose verbose\n";
   print "  --reload do rndc reload zone\n";
@@ -40,10 +39,11 @@ if(0 eq $len) {
 my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime(time);
 $year+=1900;
 $mon++;
-$newserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
+my $newserial = sprintf "%02d%02d%02d00", $year , $mon , $mday;
 
-foreach $file ( @ARGV ) {
+foreach my $file ( @ARGV ) {
   my ($dir,$basn)=split /\//, $file;
+  my $zone;
   if($dir =~ /^[0-9.]+$/) {
     $zone = join(".",(reverse(split(/\./, $dir)),"in-addr.arpa"));
   # Looks like a ipv6 reverse zone at UmU
@@ -54,7 +54,7 @@ foreach $file ( @ARGV ) {
   } else {
     $zone = $dir;
   }
-  @SOA=split / /, `host -t soa $zone`;
+  my @SOA=split / /, `host -t soa $zone`;
   system("cp $file.in $file") unless -f $file;
   rename($file, $file . ".OLD") || die "Can't rename in file $file.";
   open(CURR, $file . ".OLD") || die "Can't read from $file.OLD";
@@ -62,7 +62,7 @@ foreach $file ( @ARGV ) {
   open(OUT, "> " . $file) || die "Can't write to $file.";
   while(<CURR>) {
     if(/^\s+(\d{10})\s+\;\s+Serial/) {
-      $fserial = $1;
+      my $fserial = $1;
       $newserial = max($newserial, $fserial, $SOA[6]);
       $newserial++;
       print "soa: $SOA[6] and file: $fserial => newserial: $newserial \n" if $verbose;
@@ -79,13 +79,13 @@ foreach $file ( @ARGV ) {
   close(IN);
   close(OUT);
   close(CURR);
-}
 
-if ($do_reload) {
-    if (!system("rndc status >/dev/null 2>&1")) {
-	print "rndc reload $zone\n" if ($verbose);
-	system("rndc reload $zone") == 0 or print "rndc reload $zone failed: $?\n";
-    } else {
-	print "rndc status failed: $?. Not reloading $zone\n" if $verbose;
-    }
+  if ($do_reload) {
+      if (!system("rndc status >/dev/null 2>&1")) {
+	  print "rndc reload $zone\n" if ($verbose);
+	  system("rndc reload $zone") == 0 or print "rndc reload $zone failed: $?\n";
+      } else {
+	  print "rndc status failed: $?. Not reloading $zone\n" if $verbose;
+      }
+  }
 }
