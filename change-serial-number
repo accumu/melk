@@ -23,6 +23,7 @@ use strict;
 
 use Getopt::Long;
 use List::Util qw(max);
+use File::Temp qw /tempfile/;
 
 sub getsoa {
   my ($zone, $server) = @_;
@@ -82,32 +83,44 @@ foreach my $file ( @ARGV ) {
     $soaserial = $SOA[6];
   }
 
-  if(! -f $file) {
-    system("cp $file.in $file") && die "No $file or $file.in, aborting.\n";
+  if(! -f $file && ! -f "$file.in") {
+    die "No $file or $file.in, aborting.\n";
   }
-  rename($file, $file . ".OLD") || die "Can't rename in file $file.";
-  open(CURR, $file . ".OLD") || die "Can't read from $file.OLD";
-  open(IN, $file . ".in") || die "Can't read from $file.in";
-  open(OUT, "> " . $file) || die "Can't write to $file.";
-  while(<CURR>) {
-    if(/^\s+(\d{10})\s+\;\s+Serial/) {
-      my $fserial = $1;
-      $newserial = max($newserial, $fserial, $soaserial);
-      $newserial++;
-      print "soa: $soaserial and file: $fserial => newserial: $newserial \n" if $verbose;
+
+  my $fserial = 0;
+  if(-f $file) {
+    open(my $curr, $file) || die "open $file: $!";
+    while(<$curr>) {
+      if(/^\s+(\d{10})\s+\;\s+Serial/) {
+	$fserial = $1;
+	last;
+      }
     }
+    close($curr) or die "close $file: $!";
   }
-  while(<IN>) {
+  $newserial = max($newserial, $fserial, $soaserial);
+  $newserial++;
+  print "soa: $soaserial and file: $fserial => newserial: $newserial \n" if $verbose;
+
+  my $infile = $file;
+  if(-f "$file.in") {
+    $infile = "$file.in";
+  }
+  open(my $in, $infile) || die "open $infile: $!";
+  my($out, $tmpout) = tempfile("$file.XXXXXX");
+  while(<$in>) {
     if(/^\s+(\d{10})\s+\;\s+Serial/) {
-      printf OUT "\t\t\t%d\t; Serial\n", $newserial;
+      printf $out "\t\t\t%d\t; Serial\n", $newserial;
     } else {
-      print OUT;
+      print $out $_;
     }
   }
+  close($in) or die "close $infile: $!";
+  close($out) or die "close $tmpout: $!";
+  chmod(0666 &~ umask, $tmpout); # tempfile creates secret files
+  rename($file, "$file.OLD") || die "rename $file $file.OLD: $!";
+  rename($tmpout, $file) || die "rename $tmpout $file: $!";
   printf "%s is now revision %d\n", $file, $newserial;
-  close(IN) or die "Closing IN: $!";
-  close(OUT) or die "Closing OUT: $!";
-  close(CURR) or die "Closing CURR: $!";
 
   if ($do_reload) {
       if (!system("rndc status >/dev/null 2>&1")) {
