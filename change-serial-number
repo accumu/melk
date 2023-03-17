@@ -24,6 +24,22 @@ use strict;
 use Getopt::Long;
 use List::Util qw(max);
 
+sub getsoa {
+  my ($zone, $server) = @_;
+  my @cmd = qw{host -t soa};
+  push @cmd, '-T' if($server);
+  push @cmd, $zone;
+  push @cmd, $server if($server);
+
+  my @a = grep(/SOA/, `@cmd`);
+
+  if(scalar(@a) == 1) {
+    return split / /, $a[0];
+  }
+
+  return undef;
+}
+
 my $verbose=0;
 my $do_reload = 0;
 
@@ -54,7 +70,18 @@ foreach my $file ( @ARGV ) {
   } else {
     $zone = $dir;
   }
-  my @SOA=split / /, `host -t soa $zone`;
+  my @SOA = getsoa($zone, "localhost");
+  if(!@SOA) {
+    @SOA = getsoa($zone);
+  }
+  if(!@SOA) {
+    warn "Couldn't get SOA from DNS";
+  }
+  my $soaserial = 0;
+  if($SOA[6] =~ /^\d+$/) {
+    $soaserial = $SOA[6];
+  }
+
   if(! -f $file) {
     system("cp $file.in $file") && die "No $file or $file.in, aborting.\n";
   }
@@ -65,9 +92,9 @@ foreach my $file ( @ARGV ) {
   while(<CURR>) {
     if(/^\s+(\d{10})\s+\;\s+Serial/) {
       my $fserial = $1;
-      $newserial = max($newserial, $fserial, $SOA[6]);
+      $newserial = max($newserial, $fserial, $soaserial);
       $newserial++;
-      print "soa: $SOA[6] and file: $fserial => newserial: $newserial \n" if $verbose;
+      print "soa: $soaserial and file: $fserial => newserial: $newserial \n" if $verbose;
     }
   }
   while(<IN>) {
