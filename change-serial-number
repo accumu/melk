@@ -118,7 +118,9 @@ foreach my $file ( @ARGV ) {
   close($in) or die "close $infile: $!";
   close($out) or die "close $tmpout: $!";
   chmod(0666 &~ umask, $tmpout); # tempfile creates secret files
-  rename($file, "$file.OLD") || die "rename $file $file.OLD: $!";
+  if(-f $file) {
+    rename($file, "$file.OLD") || die "rename $file $file.OLD: $!";
+  }
   rename($tmpout, $file) || die "rename $tmpout $file: $!";
   printf "%s is now revision %d\n", $file, $newserial;
 
