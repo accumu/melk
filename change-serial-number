@@ -79,7 +79,7 @@ foreach my $file ( @ARGV ) {
     warn "Couldn't get SOA from DNS";
   }
   my $soaserial = 0;
-  if($SOA[6] =~ /^\d+$/) {
+  if($SOA[6] && $SOA[6] =~ /^\d+$/) {
     $soaserial = $SOA[6];
   }
 
