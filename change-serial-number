@@ -38,7 +38,7 @@ sub getsoa {
     return split / /, $a[0];
   }
 
-  return undef;
+  return;
 }
 
 my $verbose=0;
@@ -75,11 +75,11 @@ foreach my $file ( @ARGV ) {
   if(!@SOA) {
     @SOA = getsoa($zone);
   }
-  if(!@SOA) {
-    warn "Couldn't get SOA from DNS";
-  }
   my $soaserial = 0;
-  if($SOA[6] =~ /^\d+$/) {
+  if(!@SOA) {
+    warn "Couldn't get SOA for $zone from DNS";
+  }
+  elsif($SOA[6] =~ /^\d+$/) {
     $soaserial = $SOA[6];
   }
 
@@ -98,9 +98,10 @@ foreach my $file ( @ARGV ) {
     }
     close($curr) or die "close $file: $!";
   }
+  print "soa:$soaserial file:$fserial now:$newserial" if $verbose;
   $newserial = max($newserial, $fserial, $soaserial);
   $newserial++;
-  print "soa: $soaserial and file: $fserial => newserial: $newserial \n" if $verbose;
+  print " => newserial: $newserial\n" if $verbose;
 
   my $infile = $file;
   if(-f "$file.in") {
