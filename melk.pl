@@ -441,8 +441,16 @@ sub multiname {
                     $ip6=&makev6($ipv6net,$ipv6prefix,$ip);
 		    &forw("$mname	$ttl		AAAA	$ip6	; $host\n");
                 } 
-		$mname = "	";
 	}
+
+	if (defined($sshfp{$mname})) {
+	    foreach my $salgo (sort keys %{$sshfp{$mname}}) {
+		foreach my $sftptype (sort keys %{$sshfp{$mname}{$salgo}}) {
+		    &forw("                            $sshfp{$mname}{$salgo}{$sftptype}\n");
+		}
+	    }
+	}
+
 	&forw("				MX 0 $mx\n");
 }
 
